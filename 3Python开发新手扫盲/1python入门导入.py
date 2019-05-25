@@ -6,6 +6,7 @@ a.append(50)
 a.append(50)
 a.extend(a)
 index=a.index(30)
+
 print(index)
 
 
@@ -28,3 +29,5 @@ dele=[1,2,3]
 del dele[0]
 
 print(dele)
+
+a=list[1,2,3]

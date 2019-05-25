@@ -1,0 +1,138 @@
+# # -*- coding:utf8 -*-
+#
+# # 第一讲 大纲
+# #
+# # 第二讲 python数据类型 numpy使用
+#     #array
+#
+# # 第三讲 python数据可视化
+#
+# #import matplotlib as mpl
+# import numpy as np
+import matplotlib.pyplot as plt
+#
+# np.random.seed(1000)
+# y=np.random.standard_normal(20)
+# x=range(len(y))
+#
+# plt.figure()
+# plt.title('Plot 1')
+# plt.subplot(211)
+# plt.plot(x,y)
+#
+#
+#
+# plt.title('Plot 2')
+# plt.subplot(212)
+# plt.plot(y,'b',lw=10.5)
+# plt.plot(y,'ro',lw=10.5)
+#
+#
+# plt.figure()
+# plt.bar(np.arange(len(y)),y,width=0.5,color='green')
+# plt.show()
+#
+# # x_data = np.random.rand(100)
+# # noise = np.random.normal(0, 0.01, x_data.shape)
+# # y_data = x_data * 0.1 + 0.2 + noise
+# #
+# # plt.plot(x_data, y_data, 'r')
+#
+# #
+#
+# #
+# # 第四讲 金融时间序列分析 pandas基础
+#
+# import pandas as pd
+# df=pd.DataFrame([1,2,3,4],columns='number',index=['a','b','c','d'])
+# df['number'].plot(kind='bar',x='name',y='age')
+
+# 第五讲 输入输出 pandas io
+
+path='./data/'
+#
+import numpy as np
+#
+# from random import gauss
+#
+# import pickle
+# #
+# a=[gauss(1.5,2) for i in range(100)]
+# #
+# f=open(path+'data.pk1','w')
+# #
+# pickle.dump(a,f)
+# f.close()
+# fr=open(path+'data.pk1','r')
+# #
+# b=pickle.load(fr)
+# print b[:7]
+
+# a=[gauss(1.5,2) for i in range(100)]
+# import pickle
+# pkl_file=open(path+'data.pkl','w')
+# pickle.dump(a,pkl_file)
+# pkl_file
+# pkl_file.close()
+#
+# pkl_file=open(path+'data.pkl','r')
+# b=pickle.load(pkl_file)
+# print b[:5]
+
+#print a
+
+
+  #part 2 text io
+import pandas as pd
+a=np.random.standard_normal((5 ,5))
+a.round(4 )
+#print a
+
+time=pd.date_range(start='2014/1/1',periods=5,freq='H')
+#print time
+
+csv_file=open(path+'data.csv','w+')
+
+header='date,no1,no2,no3,no4,no5\n'
+
+csv_file.write(header)
+for t_,[no1,no2,no3,no4,no5] in zip(time,a):
+    s='%s,%f,%f,%f,%f,%f\n' % (t_,no1,no2,no3,no4,no5)
+    csv_file.write(s)
+csv_file.close()
+
+
+#---------pandas to csv--------------
+#a.to_csv('1'+'.csv','w')
+#import pandas as pd
+
+df=pd.DataFrame([1,2,3,4],columns=['number'],index=['a','b','c','d'])
+
+
+#df.to_csv(path+'data_df2.csv')
+
+print pd.read_csv(path+'data_df2.csv','r')
+#-------------tables 快速io
+
+
+# 第六讲 提升python效率
+
+
+# 第七讲 数学工具
+#
+# 第八讲 随机分析
+#
+# 第九讲 统计分析
+#
+# 第十讲 数值分析
+#
+# 第十一讲 面向对象和用户界面
+#
+# 第十二讲 hadoop
+#
+# 第13讲 交易系统
+#
+# 第14讲 python excel
+#
+# 第15讲 python网络编程
+#
