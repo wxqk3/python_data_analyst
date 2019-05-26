@@ -1,9 +1,10 @@
 # python_data_analyst
 
 第一阶段
-业务数据分析师"＜/br＞	
-        Excel必备常用工具使用与高级技巧＜/br＞
-	MySql数据库＜/br＞
+业务数据分析师"  
+
+        ＜br＞Excel必备常用工具使用与高级技巧＜/br＞
+	＜/br＞MySql数据库＜/br＞
 	SPSS Modeler数据挖掘＜/br＞
 	数据挖掘/分析师之软技能 - 数据分析入门＜/br＞
 	数据挖掘/分析师之软技能 - 实战需求分析＜/br＞
