@@ -23,3 +23,6 @@ dict={1:1,2:2}
 dict2={'1':1,2:2}
 #潜复制 不影响值
 #dict3=dict 则指向同一对象
+
+def fun_a(x,y):
+    return x+y
