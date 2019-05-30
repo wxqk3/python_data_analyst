@@ -9,6 +9,7 @@
 @time: 2015/12/5 0005 下午 8:26
 """
 
+import requests
 
 from lxml import etree
 
@@ -66,7 +67,8 @@ doubanhtml='''
 '''
 
 doc = etree.fromstring(doubanhtml)
-
+print 1
+print 2
 
 for eachbook in doc.xpath('//dl/dd'):
     bookname = eachbook.xpath('a/text()')[0]
