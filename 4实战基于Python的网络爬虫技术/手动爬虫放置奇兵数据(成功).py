@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 from lxml import etree
+import requests
 
 html='''
 <html lang="cn" xmlns:og="http://ogp.me/ns#" class=" js flexbox no-touch csstransitions"><!--<![endif]--><head><style type="text/css">@charset "UTF-8";[ng\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>
@@ -9472,12 +9473,17 @@ v.close()}catch(w){f[k]=u+'d.write("'+b().replace(/"/g,String.fromCharCode(92)+'
 
 '''
 
+url = "https://www.appannie.com/apps/ios/app/idle-heroes/reviews/?order_by=date&order_type=desc&date=2019-04-29~2019-05-29&translate_selected=false&granularity=weekly&stack&percent=false&series=rating_star_1,rating_star_2,rating_star_3,rating_star_4,rating_star_5"
 
-#response = requests.get(url,headers = header)
-#print response.text
-#html=response.content
-
-selector=etree.fromstring(html)
+header ={'User-Agent': 'Mozilla/5.0 (Windows NT x.y; Win64; x64; rv:10.0) Gecko/20100101 Firefox/10.0 '}
+response = requests.get(url,headers = header)
+htm0 = response.content
+# re=response.content
+#
+#
+#
+# selector2=etree.HTML(re)
+selector=etree.HTML(html)
 
 #contents=selector.xpath('//*[@id="fcxH9b"]/div[4]/c-wiz[3]/div/div[2]/div/div[1]/div/div/div[1]/div[5]/div/div[2]/div[2]')
 
@@ -9485,6 +9491,6 @@ selector=etree.fromstring(html)
 # print simple1
 # print simple1
 
-simple2=selector.xpath('//*[@id="aa-app"]/comment()[1]')
+simple2=selector.xpath('//*[@id="4229616386"]/div/div[2]/text()')
 print simple2
 print simple2
