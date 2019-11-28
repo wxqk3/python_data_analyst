@@ -1,0 +1,873 @@
+# encoding:utf8
+# aod算法步奏
+#
+# （1）（棋盘生成函数）随机生成棋盘，看是否有重复，如果有，则重新生成棋盘
+#
+# auto-battle（遇炸弹直接引发，不多进行消除操作）
+#
+# 消除（2） 看是否有炸弹，如果有，则返回第一个检索到的炸弹，
+#     (3)  没有，check more
+#     (4)  随机找一个石头，按不同方向检查，24种 4个方向，随机检查，1 2  同色，继续找3 看3的除了那个方向的 其他3个石头，有没有和1同色的
+#                                                    1 2  不同色  1 3 同色，看2 的上下有没有同色的石头
+#                                        剩下3个方向同理
+#
+#    （5）随机一个，从35个结点中删除一个，遍历完35个结点，重新洗盘
+#
+# 消除后  检查炸弹（6）看是否消除=4个，生成十字炸弹在那条线上
+#               （7）看消除是否》=5个，生成同色炸弹在十字中心
+#
+#        炸弹掉落  （8）看是否引发炸弹
+#
+#
+#        （9）普通色块掉落
+#        （10）检查普通色块是否消除
+#
+#        静止
+#
+#     （11）剩余位置随机生成颜色
+#
+#      （12） 看当前棋盘是否可消除
+
+
+
+
+
+
+#---------------------------------------------------------------------------------------------代码如下
+#import
+
+import numpy as np
+import random
+from skimage import measure
+
+#参数调整
+
+
+BOARDWIDTH = 7 # how many columns in the board
+BOARDHEIGHT = 5 # how many rows in the board
+EMPTY_SPACE = -1 # an arbitrary, nonpositive value
+
+direction=[['UP', 'DOWN', 'LEFT', 'RIGHT'],       ###AOD硬核编程 python硬核复刻 ==！
+           ['UP', 'DOWN', 'RIGHT', 'LEFT'],
+           ['UP', 'LEFT', 'DOWN', 'RIGHT'],
+           ['UP', 'LEFT', 'RIGHT','DOWN'],
+           ['UP', 'RIGHT', 'LEFT', 'DOWN'],
+           ['UP', 'RIGHT', 'DOWN', 'LEFT'],
+
+           ['DOWN', 'LEFT', 'UP', 'RIGHT'],
+           ['DOWN', 'LEFT', 'RIGHT', 'UP'],
+           ['DOWN', 'UP', 'LEFT', 'RIGHT'],
+           ['DOWN', 'UP', 'RIGHT', 'LEFT'],
+           ['DOWN','RIGHT','LEFT','UP'],
+           ['DOWN','RIGHT','UP','LEFT'],
+
+            ['LEFT', 'UP', 'DOWN', 'RIGHT'],
+            ['LEFT', 'UP', 'RIGHT', 'DOWN'],
+            ['LEFT', 'DOWN', 'UP', 'RIGHT'],
+            ['LEFT', 'DOWN', 'RIGHT', 'UP'],
+            ['LEFT', 'RIGHT', 'UP', 'DOWN'],
+            ['LEFT', 'RIGHT', 'DOWN', 'UP'],
+
+            ['RIGHT', 'DOWN', 'LEFT', 'UP'],
+            ['RIGHT', 'DOWN', 'UP', 'LEFT'],
+            ['RIGHT', 'LEFT', 'DOWN', 'UP'],
+            ['RIGHT', 'LEFT', 'UP', 'DOWN'],
+            ['RIGHT', 'UP', 'LEFT', 'DOWN'],
+            ['RIGHT', 'UP', 'DOWN', 'LEFT'],
+      ]
+
+
+
+
+
+
+
+
+
+class dot():  #35个点，就35个dot
+    def __init__(self):
+        self.type = ''  #  1-3  1是有色方块，2是十字炸弹  3是同色炸弹
+        self.color = ''  # 1-5  5种颜色 x表示没有颜色
+        self.exist = 0  #  0 1 0表示那个位置为空，1不为空
+        self.x_position=0
+        self.y_position=0
+        self.heng=0
+        self.zong=0
+        self.jiance=0
+
+
+def get_board():    ###func 1
+        # Create and return a blank board data structure.
+        board = [[0]*BOARDWIDTH for i in range(BOARDHEIGHT)]
+
+        for x in range(BOARDHEIGHT):
+            for y in range(BOARDWIDTH):
+                item = dot()
+                #随机数优化
+                #seed=np.random.randint(1,999999)
+                #rand=np.random.RandomState(x+y)
+                color = np.random.randint(1,6)
+
+                item.type=1  #全棋盘生成有色方块
+                item.color=color
+                item.exist=1
+                item.x_position=x
+                item.y_position=y
+                board[x][y]=item
+        # print board
+
+        return board
+
+def check_first_board(board):
+        #横向检查是否三个连着的情况
+        for x in range(BOARDHEIGHT):
+            for y in range(BOARDWIDTH-2):
+                if board[x][y].color == board[x][y+1].color == board[x][y+2].color:                                     #q1 连等号可以用嘛
+                    return 1
+        #竖着检查是否三个连着的情况
+        for y in range(BOARDWIDTH):
+            for x in range(BOARDHEIGHT-2):
+                if board[x][y].color == board[x+1][y].color==board[x+2][y].color:
+                    return 1
+        return 0
+
+def print_board():
+    test = [[0] * BOARDWIDTH for i in range(BOARDHEIGHT)]
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            if gameBoard[x][y].exist==1 and gameBoard[x][y].type==1:
+                test[x][y] = gameBoard[x][y].color
+            elif gameBoard[x][y].exist==1 and gameBoard[x][y].type==2:
+                test[x][y] = gameBoard[x][y].color*10
+            elif gameBoard[x][y].exist==1 and gameBoard[x][y].type==3:
+                test[x][y] = gameBoard[x][y].color*100
+            else:
+                test[x][y] =0
+
+
+    print test[0]
+    print test[1]
+    print test[2]
+    print test[3]
+    print test[4]
+
+
+def get_bombs(gameBoard):     ###直接遍历返回第一个炸弹
+    global bomb_x,bomb_y
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            if gameBoard[x][y].type!=1 and gameBoard[x][y].exist==1:
+                bomb_x=x
+                bomb_y=y
+                return gameBoard[x][y]
+
+
+def cross_bomb_explosion(gameBoard,bomb):
+    global bomb_x, bomb_y,temp_elimination,max_elimination
+    global cnt_1, cnt_2, cnt_3, cnt_4, cnt_5,cnt
+    print '第', cnt + 1, '次操作开始: ','上次操作共消除: ',temp_elimination
+    cnt = cnt + 1
+    temp_elimination = 0
+    for x in range(BOARDHEIGHT):
+       gameBoard[x][bomb_y].exist=0
+       if gameBoard[x][bomb_y].color == 1:
+           cnt_1 = cnt_1 + 1
+           temp_elimination=temp_elimination+1
+       elif gameBoard[x][bomb_y].color == 2:
+           cnt_2 = cnt_2 + 1
+           temp_elimination = temp_elimination + 1
+       elif gameBoard[x][bomb_y].color == 3:
+           cnt_3 = cnt_3 + 1
+           temp_elimination = temp_elimination + 1
+       elif gameBoard[x][bomb_y].color == 4:
+           cnt_4 = cnt_4 + 1
+           temp_elimination = temp_elimination + 1
+       elif gameBoard[x][bomb_y].color == 5:
+           cnt_5 = cnt_5 + 1
+           temp_elimination = temp_elimination + 1
+
+    for y in range(BOARDWIDTH):
+        gameBoard[bomb_x][y].exist=0
+        if gameBoard[bomb_x][y].color == 1:
+            cnt_1 = cnt_1 + 1
+            temp_elimination = temp_elimination + 1
+        elif gameBoard[bomb_x][y].color == 2:
+            cnt_2 = cnt_2 + 1
+            temp_elimination = temp_elimination + 1
+        elif gameBoard[bomb_x][y].color == 3:
+            cnt_3 = cnt_3 + 1
+            temp_elimination = temp_elimination + 1
+        elif gameBoard[bomb_x][y].color == 4:
+            cnt_4 = cnt_4 + 1
+            temp_elimination = temp_elimination + 1
+        elif gameBoard[bomb_x][y].color == 5:
+            cnt_5 = cnt_5 + 1
+            temp_elimination = temp_elimination + 1
+
+    if gameBoard[bomb_x][bomb_y].color == 1: cnt_1 = cnt_1 - 1
+    if gameBoard[bomb_x][bomb_y].color == 2: cnt_2 = cnt_2 - 1
+    if gameBoard[bomb_x][bomb_y].color == 3: cnt_3 = cnt_3 - 1
+    if gameBoard[bomb_x][bomb_y].color == 4: cnt_4 = cnt_4 - 1
+    if gameBoard[bomb_x][bomb_y].color == 5: cnt_5 = cnt_5 - 1
+    temp_elimination = temp_elimination - 1
+    if max_elimination < temp_elimination:
+        max_elimination = temp_elimination
+    return gameBoard
+
+
+
+def color_bomb_explosion(gameBoard,bomb):
+    global cnt_1, cnt_2, cnt_3, cnt_4, cnt_5,cnt,temp_elimination,max_elimination
+    print '第', cnt + 1, '次操作开始: ','上次操作共消除: ',temp_elimination
+    cnt = cnt + 1
+    temp_elimination = 0
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            if gameBoard[x][y].color==bomb.color:
+                gameBoard[x][y].exist=0
+                if gameBoard[x][y].color == 1:
+                    cnt_1 = cnt_1 + 1
+                    temp_elimination = temp_elimination + 1
+                elif gameBoard[x][y].color == 2:
+                    cnt_2 = cnt_2 + 1
+                    temp_elimination = temp_elimination + 1
+                elif gameBoard[x][y].color == 3:
+                    cnt_3 = cnt_3 + 1
+                    temp_elimination = temp_elimination + 1
+                elif gameBoard[x][y].color == 4:
+                    cnt_4 = cnt_4 + 1
+                    temp_elimination = temp_elimination + 1
+                elif gameBoard[x][y].color == 5:
+                    cnt_5 = cnt_5 + 1
+                    temp_elimination = temp_elimination + 1
+    if max_elimination < temp_elimination:
+        max_elimination = temp_elimination
+    return gameBoard
+
+
+
+
+def check_around(board,direction):
+    global cnt,temp_elimination
+
+
+    def check_around_the_third():
+        if direct=='UP' and y>=1:
+            if board[x-2][y-1].color==board[x][y].color : return x-2,y-1, 'RIGHT'
+        if direct=='UP' and y<=5:
+            if board[x-2][y+1].color==board[x][y].color : return x-2,y+1, 'LEFT'
+        if direct=='UP' and x>=3:
+            if board[x-3][y].color == board[x][y].color: return x-3,y, 'DOWN'
+
+        if direct=='DOWN' and y >=1:
+            if board[x + 2][y - 1].color == board[x][y].color: return x + 2,y - 1, 'RIGHT'
+        if direct == 'DOWN' and y <= 5:
+            if board[x + 2][y + 1].color == board[x][y].color: return x + 2,y + 1, 'LEFT'
+        if direct=='DOWN' and x<=1:
+            if board[x+3][y].color==board[x][y].color :return x+3,y, 'UP'
+
+        if direct=='LEFT' and y>=3:
+            if board[x][y-3].color==board[x][y].color : return x,y-3,'RIGHT'
+        if direct=='LEFT' and x>=1:
+            if board[x-1][y-2].color==board[x][y].color : return  x-1,y-2,'DOWN'
+        if direct=='LEFT' and x<=3:
+            if board[x+1][y-2].color==board[x][y].color : return x+1,y-2,'UP'
+
+        if direct=='RIGHT' and y<=3:
+            if board[x][y+3].color ==board[x][y].color :return x,y+3,'LEFT'
+        if direct=='RIGHT' and x>=1:
+            if board[x-1][y+2].color == board[x][y].color :return x-1,y+2,'DOWN'
+        if direct=='RIGHT' and x<=3:
+            if board[x+1][y+2].color==board[x][y].color :return x+1,y+2,'UP'
+        return 1,1,1
+
+
+    def check_around_the_second():
+
+        if direct=='UP' and y>=1:
+            if board[x-1][y-1].color==board[x][y].color : return x-1,y-1,'RIGHT'
+        if direct=='UP' and y<=5:
+            if board[x-1][y+1].color ==board[x][y].color :return x-1,y+1, 'LEFT'
+
+        if direct == 'DOWN' and y >= 1:
+            if board[x + 1][y - 1].color == board[x][y].color: return x + 1,y - 1, 'RIGHT'
+        if direct == 'DOWN' and y <= 5:
+            if board[x + 1][y + 1].color == board[x][y].color: return x + 1,y + 1, 'LEFT'
+
+        if direct=='LEFT' and x >=1:
+            if board[x-1][y-1].color==board[x][y].color :return x-1,y-1,'DOWN'
+        if direct=='LEFT' and x<=3:
+            if board[x+1][y-1].color==board[x][y].color :return x+1,y-1,'UP'
+
+        if direct=='RIGHT' and x>=1:
+            if board[x-1][y+1].color ==board[x][y].color :return x-1,y+1,'DOWN'
+        if direct=='RIGHT' and x<=3:
+            if board[x+1][y+1].color ==board[x][y].color :return x+1,y+1,'UP'
+        return 1, 1, 1
+
+
+
+
+
+
+    x = 1
+    y = 1
+    b = 1
+    stac=[]
+
+    for temp_x in range(BOARDHEIGHT):
+        for temp_y in range(BOARDWIDTH):
+            stac.append([temp_x,temp_y])
+
+    random.shuffle(stac)
+
+
+    while (b==1 and stac!=[]):
+        temp=stac.pop()
+
+        x=temp[0]
+        y=temp[1]
+
+        random_index=np.random.randint(0,24)   #取0-24 随机一个
+
+
+        for num in range(4):
+            direct=direction[random_index][num]
+            #print x,y,direct
+            if direct=='UP' and x>=2 and b==1:
+                if board[x-1][y].color==board[x][y].color:
+                   x,y,b=check_around_the_third()
+                else :
+                    if board[x-2][y].color==board[x][y].color:
+                        x,y,b=check_around_the_second()
+
+            elif direct =='DOWN' and x<=2 and b==1:
+                if board[x+1][y].color==board[x][y].color:
+                    x,y,b=check_around_the_third()
+                else :
+                    if board[x+2][y].color==board[x][y].color:
+                        x,y,b=check_around_the_second()
+
+            elif direct =='LEFT' and y >=2 and b==1:
+                if board[x][y-1].color==board[x][y].color:
+                    x,y,b=check_around_the_third()
+                else :
+                    if board[x][y-2].color==board[x][y-2]:
+                        x,y,b=check_around_the_second()
+
+            elif direct =='RIGHT' and y <=4 and b==1:
+                if board[x][y+1].color==board[x][y].color:
+                    x,y,b=check_around_the_third()
+                else :
+                    if board[x][y+2].color==board[x][y].color:
+                        x,y,b=check_around_the_second()
+
+    #print canMakeMove(board)
+    print '第', cnt + 1, '次操作开始: ','上次操作共消除: ',temp_elimination
+    cnt = cnt + 1
+    temp_elimination = 0
+    return x,y,b
+
+
+
+def swap_action(x,y,dir,board):
+
+
+    if dir=='UP':
+      temp=board[x-1][y]
+      board[x-1][y]=board[x][y]
+      board[x][y]=temp
+
+    if dir=='DOWN':
+      temp=board[x+1][y]
+      board[x+1][y]=board[x][y]
+      board[x][y]=temp
+
+    if dir=='LEFT':
+      temp=board[x][y-1]
+      board[x][y-1]=board[x][y]
+      board[x][y]=temp
+
+    if dir=='RIGHT':
+      temp=board[x][y+1]
+      board[x][y+1]=board[x][y]
+      board[x][y]=temp
+    return board
+
+def board_solve_action(board):
+
+        #global var
+        global cnt_1, cnt_2, cnt_3, cnt_4, cnt_5,max_elimination,temp_elimination
+
+        # 横向检查是否三个连着的情况
+        for x in range(BOARDHEIGHT):
+            for y in range(BOARDWIDTH - 2):
+                if board[x][y].color == board[x][y + 1].color == board[x][y + 2].color:  # q1 连等号可以用嘛
+                    board[x][y].exist=0
+                    board[x][y+1].exist=0
+                    board[x][y+2].exist=0
+        # 竖着检查是否三个连着的情况
+        for y in range(BOARDWIDTH):
+            for x in range(BOARDHEIGHT - 2):
+                if board[x][y].color == board[x + 1][y].color == board[x + 2][y].color:
+                    board[x][y].exist=0
+                    board[x+1][y].exist=0
+                    board[x+2][y].exist=0
+
+        for x in range(BOARDHEIGHT):
+            for y in range(BOARDWIDTH):
+                if board[x][y].exist==0:
+                    if board[x][y].color ==1: cnt_1=cnt_1+1
+                    elif board[x][y].color ==2: cnt_2=cnt_2+1
+                    elif board[x][y].color ==3: cnt_3=cnt_3+1
+                    elif board[x][y].color ==4: cnt_4=cnt_4+1
+                    elif board[x][y].color ==5: cnt_5=cnt_5+1
+                    temp_elimination=temp_elimination+1
+
+        if max_elimination<temp_elimination:
+            max_elimination=temp_elimination
+
+
+        # #生成炸弹
+        #1 打上联通区域标签
+        color = [[0] * BOARDWIDTH for i in range(BOARDHEIGHT)]
+        for x in range(BOARDHEIGHT):
+            for y in range(BOARDWIDTH):
+                if board[x][y].exist==0:
+                    color[x][y]=board[x][y].color
+                else :color[x][y]=0
+
+        ndarray = np.asarray(color)
+
+        labels = measure.label(ndarray, connectivity=1)  # 4连通区域标记
+        print labels
+
+        #2 装炸弹
+        max=labels.max()
+        for i in range (1,max+1):   #针对每个连通区域的循环
+            temp=np.where(labels==i,1,0)
+            num=temp.sum()          #判断这个连通区域消除了几个
+            flag=0
+            if num == 4:
+                for x in range(BOARDHEIGHT):
+                    for y in range(BOARDWIDTH):
+                        if labels[x][y]==i:
+                            board[x][y].type=2
+                            board[x][y].exist=1
+                            flag=1
+                            break
+                    if flag==1:
+                        break
+            if num >= 5:
+                for x in range(BOARDHEIGHT):
+                    for y in range(BOARDWIDTH):
+                        if labels[x][y]==i:
+                            board[x][y].type=3
+                            board[x][y].exist=1
+                            flag=1
+                            break
+                    if flag==1:
+                        break
+
+
+        return board
+
+        # for x in range(BOARDHEIGHT):
+        #     for y in range(BOARDWIDTH):
+
+        #有联系的就放进这个堆栈里，且炸弹指向第一个
+
+
+        #先不加炸弹
+        # def right(x,y):
+        #     if  y+1<=6 and board[x][y + 1].color == board[x][y].color:
+        #         rcnt=rcnt+1
+        #         right(x,y+1)
+        #
+        # def left(x,y):
+        #     if  y-1>=0 and board[x][y-1].color ==board[x][y].color:
+        #         lcnt=lcnt+1
+        #         left(x,y-1)
+        #
+        # def up(x,y):
+        #     if x-1>=0 and board[x-1][y].color == board[x][y].color:
+        #         ucnt=ucnt+1
+        #         up(x-1,y)
+        #
+        # def down(x,y):
+        #     if x+1<=4 and board[x-1][y].color == board[x][y].color:
+        #         dcnt=dcnt+1
+        #         down(x+1,y)
+        #
+        #
+        # for x in range(BOARDHEIGHT):
+        #     for y in range(BOARDWIDTH):
+        #         lianxi = []
+        #         rcnt=0
+        #         lcnt=0
+        #         ucnt=0
+        #         dcnt=0
+        #         lianxi.append(board[x][y])
+        #         right(x,y)
+        #         left(x,y)
+        #         up(x,y)
+        #         down(x,y)
+
+
+
+
+
+
+
+
+
+
+
+def board_drop_action(board):
+
+            for y in range(BOARDWIDTH):
+                empty = 0
+                for x in range(4, -1, -1):   ##43210
+                   if board[x][y].exist ==0:
+                        empty=empty+1
+                   if empty != 0 and board[x][y].exist==1:
+                       temp=board[x+empty][y]
+                       board[x+empty][y]=board[x][y]
+                       board[x][y]=temp
+                       #empty=0
+            return board
+
+def random_fill_empty_part(board):
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            if board[x][y].exist==0:
+                item = dot()
+                # 随机数优化
+                # seed=np.random.randint(1,999999)
+                # rand=np.random.RandomState(x+y)
+                color = np.random.randint(1, 6)
+
+                item.type = 1  # 全棋盘生成有色方块
+                item.color = color
+                item.exist = 1
+                item.x_position = x
+                item.y_position = y
+                board[x][y] = item
+        # print board
+    return board
+
+def reroll_board_action(board):
+    global dead_board_cnt
+
+    dead_board_cnt=dead_board_cnt+1
+
+    boardlist = []
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            boardlist.append(board[x][y])
+    random.shuffle(boardlist)
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+           board[x][y]=boardlist.pop()
+    return board
+
+
+def canMakeMove(board):
+    # Return True if the board is in a state where a matching
+    # move can be made on it. Otherwise return False.
+
+    # The patterns in oneOffPatterns represent gems that are configured
+    # in a way where it only takes one move to make a triplet.  #a向左移动  ，把一个3连移开，可以产生八种情况，以下
+    oneOffPatterns = (((0,1), (1,0), (2,0)),
+                      ((0,1), (1,1), (2,0)),
+                      ((0,0), (1,1), (2,0)),
+                      ((0,1), (1,0), (2,1)),
+                      ((0,0), (1,0), (2,1)),
+                      ((0,0), (1,1), (2,1)),
+                      ((0,0), (0,2), (0,3)),
+                      ((0,0), (0,1), (0,3)))
+
+    # The x and y variables iterate over each space on the board.
+    # If we use + to represent the currently iterated space on the
+    # board, then this pattern: ((0,1), (1,0), (2,0))refers to identical
+    # gems being set up like this:
+    #
+    #     +A
+    #     B
+    #     C
+    #
+    # That is, gem A is offset from the + by (0,1), gem B is offset
+    # by (1,0), and gem C is offset by (2,0). In this case, gem A can
+    # be swapped to the left to form a vertical three-in-a-row triplet.
+    #
+    # There are eight possible ways for the gems to be one move
+    # away from forming a triple, hence oneOffPattern has 8 patterns.
+
+    for x in range(BOARDHEIGHT):
+        for y in range(BOARDWIDTH):
+            for pat in oneOffPatterns:
+                # check each possible pattern of "match in next move" to
+                # see if a possible move can be made.
+                if (getGemAt(board, x+pat[0][0], y+pat[0][1]) == getGemAt(board, x+pat[1][0], y+pat[1][1]) == getGemAt(board, x+pat[2][0], y+pat[2][1]) != None) or (getGemAt(board, x+pat[0][1], y+pat[0][0]) == getGemAt(board, x+pat[1][1], y+pat[1][0]) == getGemAt(board, x+pat[2][1], y+pat[2][0]) != None): return True # return True the first time you find a pattern
+    return False
+
+def getGemAt(board, x, y):  #获取那一格的颜色
+    if x < 0 or y < 0 or x >= BOARDHEIGHT or y >= BOARDWIDTH:
+        return None
+    else:
+        return board[x][y].color
+
+def bomb_explosion(gameBoard):
+    bomb = get_bombs(gameBoard)
+    while bomb is not None:
+        if bomb.type == 2:
+            gameBoard = cross_bomb_explosion(gameBoard, bomb)
+            print '----------------------cross_bomb_explosion', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+            print_board()
+
+            gameBoard = board_drop_action(gameBoard)
+            print '----------------------dropped'
+            print_board()
+
+            gameBoard = random_fill_empty_part(gameBoard)
+            print '----------------------filled'
+            print_board()
+
+            while (check_first_board(gameBoard)):  # 判断目前状态有没有三连，直到静止
+                # 交换完成后 执行消除操作
+                gameBoard = board_solve_action(gameBoard)
+                print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+                print_board()
+
+                # 消除完成后 执行掉落操作
+                gameBoard = board_drop_action(gameBoard)
+                print '----------------------dropped'
+                print_board()
+
+                gameBoard = random_fill_empty_part(gameBoard)
+                print '----------------------filled'
+                print_board()
+
+            bomb = get_bombs(gameBoard)
+        else:
+            gameBoard = color_bomb_explosion(gameBoard, bomb)
+            print '----------------------color_bomb_explosion', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+            print_board()
+
+            gameBoard = board_drop_action(gameBoard)
+            print '----------------------dropped'
+            print_board()
+
+            gameBoard = random_fill_empty_part(gameBoard)
+            print '----------------------filled'
+            print_board()
+
+            while (check_first_board(gameBoard)):  # 判断目前状态有没有三连，直到静止
+                # 交换完成后 执行消除操作
+                gameBoard = board_solve_action(gameBoard)
+                print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+                print_board()
+
+                # 消除完成后 执行掉落操作
+                gameBoard = board_drop_action(gameBoard)
+                print '----------------------dropped'
+                print_board()
+
+                gameBoard = random_fill_empty_part(gameBoard)
+                print '----------------------filled'
+                print_board()
+
+            bomb = get_bombs(gameBoard)
+
+
+def auto_battle(gameBoard):
+
+    global cnt
+
+    # 1判断是否有炸弹，自动引爆
+    bomb_explosion(gameBoard)
+
+
+
+    gameBoard2=gameBoard
+    while not canMakeMove(gameBoard2):             #判断当前棋盘状态 如果死局 reroll
+        gameBoard2=reroll_board_action(gameBoard2)  #
+        print ('not movable,rerolled')
+        print '----------------------rerolled'
+        print_board()
+
+    #死局随机后 等静止
+    while (check_first_board(gameBoard2)):  #判断目前状态有没有三连，直到静止
+        #交换完成后 执行消除操作
+        gameBoard2 = board_solve_action(gameBoard2)
+        print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+        print_board()
+
+        #消除完成后 执行掉落操作
+        gameBoard2 = board_drop_action(gameBoard2)
+        print '----------------------dropped'
+        print_board()
+
+        gameBoard2=random_fill_empty_part(gameBoard2)
+        print '----------------------filled'
+        print_board()
+
+
+
+
+    #不是死局就开始检测路径
+    x,y,b=check_around(gameBoard2,direction)
+    print 'solved',x+1,y+1,b
+
+
+    #找到路径后 执行交换操作
+    gameBoard2=swap_action(x,y,b,gameBoard2)
+    print '----------------------swapped'
+    print_board()
+
+    while (check_first_board(gameBoard2)):  #判断目前状态有没有三连，直到静止
+        #交换完成后 执行消除操作
+        gameBoard2 = board_solve_action(gameBoard2)
+        print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+        print_board()
+
+        #消除完成后 执行掉落操作
+        gameBoard2 = board_drop_action(gameBoard2)
+        print '----------------------dropped'
+        print_board()
+
+        gameBoard2=random_fill_empty_part(gameBoard2)
+        print '----------------------filled'
+        print_board()
+
+
+
+
+if __name__=='__main__':
+
+    #定义一些计数
+    cnt=1
+    cnt_1=0
+    cnt_2=0
+    cnt_3=0
+    cnt_4=0
+    cnt_5=0
+    dead_board_cnt=0
+    bomb_x=-1
+    bomb_y=-1
+    max_elimination=0
+    temp_elimination=0
+
+    ##生成随机棋盘
+    gameBoard=get_board()
+
+    #如果开局可消除，重新生成棋盘
+    while(check_first_board(gameBoard)):
+        gameBoard = get_board()
+
+    print '----------------------第一次开始:'
+    print '----------------------initial board'
+    print_board()
+   # gameBoard[2][3].type=2
+    #--------自动战斗
+    #1判断是否有炸弹，自动引爆
+
+
+
+    #     #1判断棋盘是否死局
+    while not canMakeMove(gameBoard):             #判断当前棋盘状态 如果死局 reroll
+        gameBoard=reroll_board_action(gameBoard)  #
+        print ('not movable,rerolled')
+
+    while (check_first_board(gameBoard)):  #判断目前状态有没有三连，直到静止
+        #交换完成后 执行消除操作
+        gameBoard = board_solve_action(gameBoard)
+        print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+        print_board()
+
+        #消除完成后 执行掉落操作
+        gameBoard = board_drop_action(gameBoard)
+        print '----------------------dropped'
+        print_board()
+
+        gameBoard=random_fill_empty_part(gameBoard)
+        print '----------------------filled'
+        print_board()
+
+
+    #不是死局就开始检测路径
+    x,y,b=check_around(gameBoard,direction)
+    print 'solved',x+1,y+1,b
+
+
+    #找到路径后 执行交换操作
+    gameBoard=swap_action(x,y,b,gameBoard)
+    print '----------------------swapped'
+    print_board()
+
+    while (check_first_board(gameBoard)):  #判断目前状态有没有三连，直到静止
+        #交换完成后 执行消除操作
+        gameBoard = board_solve_action(gameBoard)
+        print '----------------------eliminated', 'cnt1:', cnt_1, ',cnt2:', cnt_2, ',cnt3:', cnt_3, ',cnt4:', cnt_4, ',cnt5:', cnt_5,',total:(this step)',temp_elimination
+        print_board()
+
+        #消除完成后 执行掉落操作
+        gameBoard = board_drop_action(gameBoard)
+        print '----------------------dropped'
+        print_board()
+
+        gameBoard=random_fill_empty_part(gameBoard)
+        print '----------------------filled'
+        print_board()
+
+
+
+
+
+
+
+
+
+    while (cnt<5000):
+
+
+        auto_battle(gameBoard)
+
+    print 'statis: --------------------'
+    print 'steps:       ', cnt
+    print '1_eliminated ', cnt_1
+    print '2_eliminated:', cnt_2
+    print '3_eliminated:', cnt_3
+    print '4_eliminated:', cnt_4
+    print '5_eliminated:', cnt_5
+    print 'dead_board_times', dead_board_cnt
+    print 'max_elimination/step',max_elimination
+    #掉落完成后，执行填充操作
+                    # gameBoard[4][3].exist=  0
+                    # gameBoard[3][3].exist = 0
+                    # gameBoard[2][2].exist = 0
+                    # gameBoard[3][2].exist = 0
+                    # gameBoard[2][4].exist = 0
+                    # gameBoard[3][4].exist = 0
+                    # gameBoard[2][1].exist = 0
+                    # gameBoard[3][1].exist = 0
+                    #
+                    # gameBoard[1][3].exist = 0
+                    # gameBoard[1][3].exist = 0
+                    # print_board()
+                    # gameBoard=board_drop_action(gameBoard)
+                    # print_board()
+                    #
+                    # #随机填充
+                    # gameBoard=random_fill_empty_part(gameBoard)
+                    # print_board()
+                    #
+                    # #全盘检测并消除
+                    # gameBoard=board_solve_action(gameBoard)
+                    # print_board()
+                    #
+                    # #洗盘
+                    # gameBoard = reroll_board_action(gameBoard)
+                    # while (check_first_board(gameBoard)):
+                    #     gameBoard = reroll_board_action(gameBoard)
+                    # print_board()
